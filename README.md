@@ -25,6 +25,8 @@ The `post-checkout` script in this plugin detects changes based on the Git commi
 4. **Optional Suffix**:
    - If `tag_suffix` is set to true, the script appends the branch name as a suffix to the version tag (e.g., `v1.0.0-main`).
 
+5. **Setting the `NEXT_VERSION` Environment Variable**:
+   - After calculating the version, the script exports it as `NEXT_VERSION`, making it available to later pipeline steps. `NEXT_VERSION` represents the tag that needs to be applied to the Docker image and pushed to ECR.
 
 ## Usage Example
 
