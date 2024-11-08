@@ -1,0 +1,106 @@
+#!/bin/bash
+
+# Enable strict error handling
+set -euo pipefail
+
+# Use the provided version branch or default to "main"
+VERSION_BRANCH="${BUILDKITE_PLUGIN_SEMVER_ECR_VERSION_BRANCH:-main}"
+
+# Execute only if on the main branch
+if [ "$BUILDKITE_BRANCH" == "$VERSION_BRANCH" ]; then
+
+  # Validate that required environment variables are set
+  if [[ -z "${BUILDKITE_PLUGIN_SEMVER_ECR_REPOSITORY:-}" ]]; then
+    echo "Error: Repository not specified."
+    exit 1
+  fi
+  echo "Using Repository: ${BUILDKITE_PLUGIN_SEMVER_ECR_REPOSITORY}"
+
+  if [[ -z "${BUILDKITE_PLUGIN_SEMVER_ECR_REGION:-}" ]]; then
+    echo "Error: Region not specified."
+    exit 1
+  fi
+  echo "Region: ${BUILDKITE_PLUGIN_SEMVER_ECR_REGION}"
+
+  if [[ -z "${BUILDKITE_PLUGIN_SEMVER_ECR_ACCOUNT:-}" ]]; then
+    echo "Error: Account not specified."
+    exit 1
+  fi
+  echo "Account ID: ${BUILDKITE_PLUGIN_SEMVER_ECR_ACCOUNT}"
+
+  # Default initial version if none is specified
+  INITIAL_VERSION="${BUILDKITE_PLUGIN_SEMVER_ECR_INITIAL_VERSION:-v0.0.1}"
+
+  # Validate initial version format (e.g., "v0.0.1")
+  if [[ ! "$INITIAL_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    echo "Error: Invalid initial version format. Expected format: v0.0.1"
+    exit 1
+  fi
+
+  # Extract the latest commit message
+  commit_message=$(git log -1 --pretty=%s)
+
+  # Derive the version bump type from the commit message, defaults to 'patch' if unspecified
+  VERSION_BUMP=$(echo "$commit_message" | sed -n 's|.*DemystData/\([^/]*\)/.*|\1|p')
+  VERSION_BUMP="${VERSION_BUMP:-patch}"
+  echo "Version bump type identified: $VERSION_BUMP"
+
+  # Fetch the latest version tag from ECR
+  LATEST_TAG=$(aws ecr describe-images \
+    --repository-name "${BUILDKITE_PLUGIN_SEMVER_ECR_REPOSITORY}" \
+    --region "${BUILDKITE_PLUGIN_SEMVER_ECR_REGION}" \
+    --registry-id "${BUILDKITE_PLUGIN_SEMVER_ECR_ACCOUNT}" \
+    --query 'imageDetails[?starts_with(imageTags[0], `v`)] | sort_by(@, &imagePushedAt)[-1].imageTags[0]' \
+    --output text)
+
+  # Initialize version to 1.0.0 if no previous tags exist
+  if [ -z "$LATEST_TAG" ]; then
+    echo "No version tags found; initializing with ${INITIAL_VERSION}"
+    LATEST_TAG="${INITIAL_VERSION}"
+  fi
+
+  # Strip the 'v' prefix and parse version components
+  LATEST_TAG="${LATEST_TAG#v}"
+  MAJOR=$(echo "$LATEST_TAG" | cut -d. -f1)
+  MINOR=$(echo "$LATEST_TAG" | cut -d. -f2)
+  PATCH=$(echo "$LATEST_TAG" | cut -d. -f3)
+
+  # Increment version based on the identified bump type
+  case "$VERSION_BUMP" in
+    major)
+      MAJOR=$((MAJOR + 1))
+      MINOR=0
+      PATCH=0
+      ;;
+    feat)
+      MINOR=$((MINOR + 1))
+      PATCH=0
+      ;;
+    fix | patch)
+      PATCH=$((PATCH + 1))
+      ;;
+    *)
+      echo "Unknown version bump type: $VERSION_BUMP. Defaulting to patch."
+      PATCH=$((PATCH + 1))
+      ;;
+  esac
+
+  # Construct the next version tag
+  NEXT_VERSION="v${MAJOR}.${MINOR}.${PATCH}"
+
+  # Add the branch as a suffix if tag_suffix is true
+  if [[ "${BUILDKITE_PLUGIN_SEMVER_ECR_TAG_SUFFIX:-false}" == "true" ]]; then
+    NEXT_VERSION="${NEXT_VERSION}-${VERSION_BRANCH}"
+  fi
+  
+  echo "Next version for main branch: $NEXT_VERSION"
+
+else
+  # For non-main branches, use the build number as the version tag
+  NEXT_VERSION="${BUILDKITE_BUILD_NUMBER}"
+  echo "Non-${VERSION_BRANCH} branch version set to build number: $NEXT_VERSION"
+fi
+
+# Export the next version for further use
+export NEXT_VERSION
+echo "Exported NEXT_VERSION: $NEXT_VERSION"
