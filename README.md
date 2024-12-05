@@ -42,3 +42,6 @@ steps:
           account: "number" # Required
           version_branch: "branch-name"
           initial_version: "v0.0.1"
+
+> [!NOTE]
+> Make sure pull requests are squashed and merged, failing to do so will result in error.
