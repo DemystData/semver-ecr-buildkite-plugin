@@ -3,10 +3,11 @@
 # Enable strict error handling
 set -euo pipefail
 
+INITIAL_VERSION="${BUILDKITE_PLUGIN_SEMVER_ECR_INITIAL_VERSION:-v1.0.0}"
+
 # Function to validate initial parameters
 validate_parameters() {
   # Check and validate optional parameters
-  INITIAL_VERSION="${BUILDKITE_PLUGIN_SEMVER_ECR_INITIAL_VERSION:-v1.0.0}"
 
   if [[ ! "$INITIAL_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
     echo "Error: Invalid initial version format. Expected format: vX.Y.Z (e.g., v1.0.0)"
@@ -63,14 +64,6 @@ if [ "$BUILDKITE_BRANCH" == "$VERSION_BRANCH" ]; then
       --registry-id "${BUILDKITE_PLUGIN_SEMVER_ECR_ACCOUNT}" \
       --query "sort_by(imageDetails[?imageTags[?starts_with(@, \`v\`)]], &imagePushedAt)[-1].imageTags[?starts_with(@, \`v\`)] | [-1]" \
       --output text)
-  
-  # Check if the input matches the pattern
-  if [[ "$LATEST_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-      echo "Version matches the pattern: $LATEST_TAG"
-  else
-      echo "Version does not match the pattern. Please check the repository for valid version tags with pattern vX.Y.Z"
-      exit 1
-  fi
     
   echo "Latest version tag found: $LATEST_TAG"
 
@@ -79,17 +72,19 @@ if [ "$BUILDKITE_BRANCH" == "$VERSION_BRANCH" ]; then
 
   if [ -z "$LATEST_TAG" ] || [ "$LATEST_TAG_LOWER" = "null" ] || [ "$LATEST_TAG_LOWER" = "none" ]; then
     echo "No version tags found; initializing with ${INITIAL_VERSION}"
-    LATEST_TAG="${INITIAL_VERSION}"
+    VERSION_BUMP="initial"
   fi
 
-  # Strip the 'v' prefix
-  LATEST_TAG="${LATEST_TAG#v}"
+  if [[ "$VERSION_BUMP" != "initial" ]]; then
+    # Strip the 'v' prefix
+    LATEST_TAG="${LATEST_TAG#v}"
 
-  echo "Latest version tag after filter: $LATEST_TAG"
+    echo "Latest version tag after filter: $LATEST_TAG"
 
-  MAJOR=$(echo "$LATEST_TAG" | cut -d. -f1)
-  MINOR=$(echo "$LATEST_TAG" | cut -d. -f2)
-  PATCH=$(echo "$LATEST_TAG" | cut -d. -f3)
+    MAJOR=$(echo "$LATEST_TAG" | cut -d. -f1)
+    MINOR=$(echo "$LATEST_TAG" | cut -d. -f2)
+    PATCH=$(echo "$LATEST_TAG" | cut -d. -f3)
+  fi
 
   # Increment version based on the identified bump type
   case "$VERSION_BUMP" in
@@ -105,17 +100,24 @@ if [ "$BUILDKITE_BRANCH" == "$VERSION_BRANCH" ]; then
     fix | patch)
       PATCH=$((PATCH + 1))
       ;;
+    initial)
+      echo "Initial version bump type identified. Initializing with ${INITIAL_VERSION}"
+      ;;
     *)
       echo "Unknown version bump type: $VERSION_BUMP. Defaulting to patch."
       PATCH=$((PATCH + 1))
       ;;
   esac
 
-  # Construct the next version tag
-  NEXT_VERSION="v${MAJOR}.${MINOR}.${PATCH}"
-  
-  echo "Next version for branch: $NEXT_VERSION"
+  if [[ "$VERSION_BUMP" != "initial" ]]; then
+    # Construct the next version tag
+    NEXT_VERSION="v${MAJOR}.${MINOR}.${PATCH}"
+  else
+    NEXT_VERSION="${INITIAL_VERSION}"
+  fi
 
+  echo "Next version for branch: $NEXT_VERSION"
+  
 else
   # For non-main branches, use the build number as the version tag
   NEXT_VERSION="${BUILDKITE_BUILD_NUMBER}"
