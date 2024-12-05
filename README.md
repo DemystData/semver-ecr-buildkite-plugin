@@ -14,17 +14,20 @@ The `post-checkout` script in this plugin detects changes based on the Git commi
 2. **Environment Variable Validation**: 
    - The script validates that necessary environment variables (`repository`, `region`, `account`) are set before proceeding.
 
-3. **Version Tagging and Incrementing**:
+3. **Version Tagging and Incrementing for Pull Requests**:
    - If no previous tags are found, it initializes the version with `initial_version`.
-   - Extracts the latest version tag from ECR and increments the `MAJOR`, `MINOR`, or `PATCH` version based on the branch name prefix:
-     - Branches prefixed with `major/` bump the `MAJOR` version.
-     - Branches prefixed with `feat/` bump the `MINOR` version.
-     - Branches prefixed with `fix/` or `patch/` bump the `PATCH` version.
-     - If no prefix is detected, it defaults to a `patch` bump.
+   - Detects version bump type (major, minor, patch, or fix) based on Git commit messages.
+   - Pull Request : Extracts the latest version tag from ECR and increments the `MAJOR`, `FEAT`, `PATCH` or `FIX` version based on the branch name prefix:
+     - Commit message prefixed with `major:` bumps the `MAJOR` version.
+     - Commit message prefixed with `feat:` bumps the `MINOR` version.
+     - Commit message prefixed with `fix:` or `patch:` bumps the `PATCH` version.
+     - If no prefix is detected, it errors out.
 
-4. **Optional Suffix**:
-   - If `tag_suffix` is set to true, the script appends the branch name as a suffix to the version tag (e.g., `v1.0.0-main`).
+   ***Sample Commit Message:***
+      `fix: upgrade packages`
 
+4. **Setting the `NEXT_VERSION` Environment Variable**:
+   - After calculating the version, the script exports it as `NEXT_VERSION_TAG`, making it available to later pipeline steps. `NEXT_VERSION_TAG` represents the tag that needs to be applied to the Docker image and pushed to ECR.
 
 ## Usage Example
 
@@ -39,4 +42,3 @@ steps:
           account: "number" # Required
           version_branch: "branch-name"
           initial_version: "v0.0.1"
-          tag_suffix: true

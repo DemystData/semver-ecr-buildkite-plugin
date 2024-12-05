@@ -15,8 +15,6 @@ configuration:
       type: string
     initial_version:
       type: string
-    tag_suffix:
-      type: boolean
   required: 
     - repository
     - region
