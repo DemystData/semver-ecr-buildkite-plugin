@@ -45,5 +45,7 @@ steps:
 ```
 
 > [!NOTE]
-> Make sure pull requests are squashed and merged, failing to do so will result in error as it will change the commit message pattern which decodes the version bump.
-> Make sure the pull request title and commit message matches pattern `[fix|feat|major|patch]: your message`
+> - Make sure pull requests are **squashed and merged**. 
+>   - Failing to do so will result in an error because it changes the commit message pattern, which decodes the version bump.
+> - Ensure the **pull request title** and **commit message** match the following pattern:
+>   - `[fix|feat|major|patch]: your message`
