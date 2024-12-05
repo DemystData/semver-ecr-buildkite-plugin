@@ -42,6 +42,8 @@ steps:
           account: "number" # Required
           version_branch: "branch-name"
           initial_version: "v0.0.1"
+```
 
 > [!NOTE]
-> Make sure pull requests are squashed and merged, failing to do so will result in error.
+> Make sure pull requests are squashed and merged, failing to do so will result in error as it will change the commit message pattern which decodes the version bump.
+> Make sure the pull request title and commit message matches pattern `[fix|feat|major|patch]: your message`
