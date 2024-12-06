@@ -70,7 +70,7 @@ if [ "$BUILDKITE_BRANCH" == "$VERSION_BRANCH" ]; then
   # Convert LATEST_TAG to lowercase (compatible with bash and zsh)
   LATEST_TAG_LOWER=$(echo "$LATEST_TAG" | tr '[:upper:]' '[:lower:]')
 
-  if [ -z "$LATEST_TAG" ] || [ "$LATEST_TAG_LOWER" = "null" ] || [ "$LATEST_TAG_LOWER" = "none" ]; then
+  if [ -z "$LATEST_TAG" ] || [ "$LATEST_TAG" = "None" ] || [ "$LATEST_TAG_LOWER" = "null" ] || [ "$LATEST_TAG_LOWER" = "none" ]; then
     echo "No version tags found; initializing with ${INITIAL_VERSION}"
     VERSION_BUMP="initial"
   fi
