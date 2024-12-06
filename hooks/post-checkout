@@ -63,7 +63,7 @@ if [ "$BUILDKITE_BRANCH" == "$VERSION_BRANCH" ]; then
       --region "${BUILDKITE_PLUGIN_SEMVER_ECR_REGION}" \
       --registry-id "${BUILDKITE_PLUGIN_SEMVER_ECR_ACCOUNT}" \
       --query "sort_by(imageDetails[?imageTags[?starts_with(@, \`v\`)]], &imagePushedAt)[-1].imageTags[?starts_with(@, \`v\`)] | [-1]" \
-      --output text)
+      --output text --no-paginate)
     
   echo "Latest version tag found: $LATEST_TAG"
 
